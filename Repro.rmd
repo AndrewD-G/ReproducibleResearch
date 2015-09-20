@@ -1,0 +1,79 @@
+---
+title: "Markdown_demo"
+author: "Andrew Davies-Graham"
+date: "17 September 2015"
+output: html_document
+---
+
+
+
+# hello world
+
+```{r}
+setwd("C:/R/data")
+myact <- read.csv("activity.csv", na.strings = "NA")
+
+library(ggplot2)
+library(dplyr)
+
+myact$date <- as.Date(myact$date)
+
+## format intervals as characters to allow for prepending with zeroes if missing
+myact$interval <- as.character(myact$interval)
+
+
+## format intervals as times prepending missing zeroes
+for(i in seq_len(nrow(myact)) ){
+        if(nchar(myact$interval[i]) == 1){
+                myact$interval[i] <- paste("00", myact$interval[i], sep = "")}
+        if(nchar(myact$interval[i]) == 2){
+                myact$interval[i] <- paste("0", myact$interval[i], sep = "")}
+}
+
+
+##      Combined date and time as a timestamp
+myact <- mutate(myact, timestamp = paste(myact$date, myact$interval, sep = " ") )
+myact$timestamp <- strptime(myact$timestamp, "%Y-%m-%d %H%M")
+
+## format interval as time
+myact$interval <- strptime(myact$interval, format = "%H%M")
+myact$interval <-   format(myact$interval, "%H:%M")
+
+## Calculate the total number of steps taken per day
+tot_steps <-na.exclude(aggregate(myact$steps, by=list(myact$date), FUN = sum))
+
+
+## ignore the missing values in the dataset.
+good <- myact$steps >0 & !is.na(myact$steps)
+
+z <- myact[good,]
+
+## Calculate and report the mean and median of the total number of steps taken per day
+mn_steps <- aggregate(z$steps, by = list(z$date), FUN = mean)
+mn_steps <-  mean(mn_steps$x)
+med_steps <- aggregate(z$steps, by = list(z$date), FUN = median)
+mdn <-  mean(med_steps$x)
+
+
+```
+
+
+```{r, tidy=FALSE}
+# embed plots
+hist(tot_steps$x)
+
+```
+
+
+The mean amount of steps is `r mn_steps`
+The median amount of steps is `r mdn`
+
+```{r, echo=FALSE}
+## Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) 
+## and the average number of steps taken, averaged across all days (y-axis)
+
+my_time <- aggregate(z$steps, by = list(z$interval), FUN = mean)
+
+plot(strptime(my_time$Group.1, "%H:%M"), as.numeric(my_time$x), type = "l",
+     xlab = "Time of day", ylab = "Average Steps" )
+```
